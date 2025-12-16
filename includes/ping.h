@@ -14,6 +14,7 @@
 #include <netinet/ip_icmp.h>
 #include <netinet/ip.h>
 #include <math.h>
+#include <getopt.h>
 
 #define ICMP_ECHO       8
 #define ICMP_ECHOREPLY  0

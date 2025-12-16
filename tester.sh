@@ -28,6 +28,58 @@ test_cases=(
 	"-2"
 )
 
+# invalid or unsupported options
+test_cases+=(
+    "-x"
+    "-vv"
+    "-vh"
+    "-hv"
+    "--v"
+    "--verbose"
+    "-help"
+    "-?"
+    "-H"
+)
+
+# destination edge cases
+test_cases+=(
+    "0.0.0.0"
+    "255.255.255.255"
+    "127.1"
+    "127"
+    "1.1.1"
+    "1.1.1.1.1"
+    "256.1.1.1"
+    "01.02.03.004"
+    "8.8.8"
+    ".8.8.8.8"
+    "8.8.8.8."
+)
+
+# dns edge cases
+test_cases+=(
+    "localhost."
+    "localhost.."
+    ".localhost"
+    "google..com"
+    "google"
+    "a"
+    "a."
+    "example.invalid"
+    "example.test"
+)
+
+SELECTED_TEST=""
+if [[ $# -gt 0 ]]; then
+    if [[ "$1" =~ ^[0-9]+$ ]]; then
+        SELECTED_TEST="$1"
+    else
+        echo "Usage: $0 [test_number]"
+        echo "Example: $0 2"
+        exit 1
+    fi
+fi
+
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -144,6 +196,20 @@ run_test() {
 }
 
 
-for case in "${test_cases[@]}"; do
-    run_test "$case"
-done
+if [[ -n "$SELECTED_TEST" ]]; then
+    idx=$((SELECTED_TEST - 1))
+
+    if (( idx < 0 || idx >= ${#test_cases[@]} )); then
+        echo -e "${RED}Invalid test number.${NC}"
+        echo "Valid range: 1 to ${#test_cases[@]}"
+        exit 1
+    fi
+
+    echo -e "${BLUE}Running single test #$SELECTED_TEST:${NC} ${test_cases[$idx]}"
+    echo
+    run_test "${test_cases[$idx]}"
+else
+    for case in "${test_cases[@]}"; do
+        run_test "$case"
+    done
+fi

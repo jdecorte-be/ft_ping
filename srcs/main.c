@@ -23,6 +23,7 @@ void print_usage(void)
         "  -v                 verbose output\n"
         "\n"
     );
+    exit(2);
 }
 
 // **
@@ -30,62 +31,32 @@ void print_usage(void)
 // ** we need to handle -v and -? options
 int parse_args(t_ping *ping, int ac, char **av)
 {
-    int i;
-    int has_target = 0;
+    int opt;
 
-    ping->verbose = 0;
-
-    if (ac < 2)
+    while ((opt = getopt(ac, av, "vh?")) != EOF)
     {
-        fprintf(stderr, "Error: Missing destination\n");
-        print_usage();
-        return (-1);
-    }
-
-    for (i = 1; i < ac; i++)
-    {
-        if (av[i][0] == '-')
+        switch (opt)
         {
-            // options
-            if (strcmp(av[i], "-v") == 0)
-            {
+            case 'v':
                 ping->verbose = 1;
-            }
-            else if (strcmp(av[i], "-?") == 0 || strcmp(av[i], "-h") == 0 || strcmp(av[i], "--help") == 0)
-            {
+                break;
+            case 'h':
+            case '?':
                 print_usage();
-                exit(2);
-            }
-            else
-            {
-                fprintf(stderr, "Error: Unknown option '%s'\n", av[i]);
+            default:
                 print_usage();
-                return (-1);
-            }
-        }
-        else
-        {
-            if (has_target)
-            {
-                fprintf(stderr, "Error: Multiple targets specified\n");
-                print_usage();
-                return (-1);
-            }
-            ping->target = av[i];
-            has_target = 1;
         }
     }
 
-    // check target
-    if (!has_target)
-    {
-        fprintf(stderr, "Error: Missing targetq\n");
+    ac -= optind;
+    av += optind;
+
+    if (ac == 0)
         print_usage();
-        return (-1);
-    }
 
     return (0);
 }
+
 
 int resolve_host(t_ping *ping)
 {
@@ -98,6 +69,7 @@ int resolve_host(t_ping *ping)
     hints.ai_protocol = IPPROTO_ICMP;
 
     err = getaddrinfo(ping->target, NULL, &hints, &res);
+    // ! close fd
     if (err != 0)
     {
         printf("ping: %s: %s\n", ping->target, gai_strerror(err));
@@ -185,8 +157,9 @@ int main(int ac, char **av)
         }
     };
 
-    if (parse_args(&ping, ac, av) < 0)
-        return (1);
+    int err = parse_args(&ping,  ac, av);
+    if (err != 0)
+        return (err);
 
     if (init_socket(&ping) < 0)
         return (1);
