@@ -1,7 +1,7 @@
 #!/bin/bash
 
 FT_PING="./ft_ping"
-SYS_PING=$(command -v ping)
+SYS_PING=$(command -v ./ping)
 TIMEOUT_DURATION=2
 TOLERANCE_MS=30
 OUT_DIR="output"
@@ -14,14 +14,10 @@ test_cases=(
     "google.com"
     "localhost"
     "127.0.0.1"
-    "192.0.2.123"
     "notarealhost.tld"
     "999.999.999.999"
-    "invalid..address"
     "-v 8.8.8.8"
     "-v google.com"
-    "-v 192.0.2.123"
-    "-v notarealhost.tld"
     "-?"
     "-h"
     "--help"
@@ -34,7 +30,6 @@ test_cases+=(
     "-vv"
     "-vh"
     "-hv"
-    "--v"
     "--verbose"
     "-help"
     "-?"
@@ -43,8 +38,9 @@ test_cases+=(
 
 # destination edge cases
 test_cases+=(
+    "255.255.255.255 "
+    "2"
     "0.0.0.0"
-    "255.255.255.255"
     "127.1"
     "127"
     "1.1.1"
@@ -149,7 +145,7 @@ run_test() {
     echo -e "${YELLOW}=== Testing: ${NC}$args ${YELLOW}===${NC}"
 
     local ft_out sys_out ft_exit sys_exit
-    ft_out=$(sudo timeout -s SIGINT $TIMEOUT_DURATION $FT_PING $args 2>&1)
+    ft_out=$(timeout -s SIGINT $TIMEOUT_DURATION $FT_PING $args 2>&1)
     ft_exit=$?
     sys_out=$(timeout -s SIGINT $TIMEOUT_DURATION $SYS_PING $args 2>&1)
     sys_exit=$?

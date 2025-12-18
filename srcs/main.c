@@ -8,55 +8,42 @@ void handler(int signum)
 		ping_running = 0;
 }
 
-// **
-// ** Print usage information
 
-void print_usage(void)
-{
-    puts(
-        "Usage\n"
-        "  ft_ping [options] <destination>\n"
-        "\n"
-        "Options:\n"
-        "  <destination>      DNS name or IP address\n"
-        "  -h                 print help and exit\n"
-        "  -v                 verbose output\n"
-        "\n"
-    );
-    exit(2);
-}
 
 // **
 // ** Parse command line arguments
 // ** we need to handle -v and -? options
-int parse_args(t_ping *ping, int ac, char **av)
+// **
+const char args_doc[] = "HOST ...";
+const char doc[] = "Send ICMP ECHO_REQUEST packets to network hosts."
+                   "\vOptions marked with (root only) are available only to "
+                   "superuser.";
+
+static struct argp_option options[] = {
+  {"verbose", 'v', NULL, 0, "verbose output"},
+  {"help",    '?', 0, 0, "give this help list"},
+  {0}
+};
+
+static error_t parse_opt(int key, char *arg, struct argp_state *state)
 {
-    int opt;
+    struct arguments *arguments = state->input;
 
-    while ((opt = getopt(ac, av, "vh?")) != EOF)
+    switch(key)
     {
-        switch (opt)
-        {
-            case 'v':
-                ping->verbose = 1;
-                break;
-            case 'h':
-            case '?':
-                print_usage();
-            default:
-                print_usage();
-        }
+        case 'v':
+            arguments->verbose = 1;
+            break;
+        case '?':
+            argp_state_help(state, stdout, ARGP_HELP_STD_HELP);
+            return 0;
+        case ARGP_KEY_NO_ARGS:
+            argp_error(state, "missing host operand");
+        default:
+            return ARGP_ERR_UNKNOWN;
     }
-
-    ac -= optind;
-    av += optind;
-
-    if (ac == 0)
-        print_usage();
-
-    return (0);
+    return 0;
 }
-
 
 int resolve_host(t_ping *ping)
 {
@@ -64,87 +51,70 @@ int resolve_host(t_ping *ping)
     struct addrinfo *res;
     int err;
 
+
     hints.ai_family = AF_INET; // IPv4
     hints.ai_socktype = SOCK_RAW;
     hints.ai_protocol = IPPROTO_ICMP;
 
-    err = getaddrinfo(ping->target, NULL, &hints, &res);
-    // ! close fd
+
+    err = getaddrinfo(ping->args.target, NULL, &hints, &res);
     if (err != 0)
-    {
-        printf("ping: %s: %s\n", ping->target, gai_strerror(err));
-        return (-1);
-    }
+        error(EXIT_FAILURE, 0, "unknown host");
 
     memcpy(&ping->addr, res->ai_addr, sizeof(struct sockaddr_in));
     freeaddrinfo(res);
+
     return (0);
 }
+
+static struct argp argp = { options, parse_opt, args_doc, doc };
 
 
 // **
 // ** Initialize raw socket
+// **
 int init_socket(t_ping *ping)
 {
-    // create raw socket
     ping->sockfd = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
     if (ping->sockfd < 0)
     {
-        perror("socket");
-        return (-1);
+        if (errno == EPERM || errno == EACCES)
+        {
+            errno = 0;
+
+            // ** linux can use datagram socket for icmp without root
+            ping->sockfd = socket(AF_INET, SOCK_DGRAM, IPPROTO_ICMP);
+            if (ping->sockfd < 0)
+            {
+                if (errno == EPERM || errno == EACCES || errno == EPROTONOSUPPORT)
+                    fprintf (stderr, "ping: Lacking privilege for icmp socket.\n");
+                else
+                    fprintf (stderr, "ping: %s\n", strerror (errno));
+
+                return (-1);
+            }
+            ping->socktype = SOCK_DGRAM;
+        }
     }
+    else
+        ping->socktype = SOCK_RAW;
     return (0);
-}
-
-int print_stats(t_ping *ping)
-{
-    // print the statistics
-    struct timeval end_time, diff;
-	gettimeofday(&end_time, NULL);
-	timersub(&end_time, &ping->stats.start_time, &diff);
-	long total_ms = diff.tv_sec * 1000 + diff.tv_usec / 1000;
-
-    printf("\n--- %s ping statistics ---\n", ping->target);
-    printf("%d packets transmitted, %d received, %.0f%% packet loss, time %ldms\n",
-        ping->stats.n_sent,
-        ping->stats.n_received,
-        (1.0 - (double)ping->stats.n_received / ping->stats.n_sent) * 100.0,
-        total_ms
-    );
-
-    if (ping->stats.n_received > 0)
-    {
-        double avg = ping->stats.total_rtt / ping->stats.n_received;
-
-        double var = (ping->stats.total_rtt_squared / ping->stats.n_received) - (avg * avg);
-        double mdev = sqrt(var > 0 ? var : 0);
-
-        printf("rtt min/avg/max/mdev = %.3f/%.3f/%.3f/%.3f ms\n",
-            ping->stats.min_rtt,
-            avg,
-            ping->stats.max_rtt,
-            mdev
-        );
-    }
-    return 0;
 }
 
 
 // **
 // ** Main ping loop functions
+// **
 int main(int ac, char **av)
 {
-    if (getuid() != 0)
-    {
-        fprintf(stderr, "Error: This program must be run as root.\n");
-        return (1);
-    }
-
+    // initialize ping struct
     t_ping ping = {
-        .verbose = 0,
-        .target = NULL,
+        .args = {
+            .target = NULL,
+            .verbose = 0
+        },
         .sockfd = -1,
-        .seq = 1,
+        .seq = 0,
         .pid = getpid() & 0xFFFF,
 
         .stats = {
@@ -157,47 +127,67 @@ int main(int ac, char **av)
         }
     };
 
-    int err = parse_args(&ping,  ac, av);
-    if (err != 0)
-        return (err);
+    int index;
+    argp_parse(&argp, ac, av, 0, &index, &ping.args);
+    ac -= index;
+    av += index;
 
-    if (init_socket(&ping) < 0)
-        return (1);
+    while(ac--)
+    {
+        // reset ping struct for each target
+        ping.stats = (struct s_stats) {
+            .n_sent = 0,
+            .n_received = 0,
+            .min_rtt = 1e9,
+            .max_rtt = 0.0,
+            .total_rtt = 0.0,
+            .total_rtt_squared = 0.0
+        };
 
-    if (resolve_host(&ping) < 0)
-        return (2);
+        ping.args.target = *av++;
 
-    // handle signals
-    signal(SIGINT, handler);
 
-    gettimeofday(&ping.stats.start_time, NULL);
+        if (resolve_host(&ping) < 0)
+            return (1);
+
+        if (init_socket(&ping) < 0)
+            return (2);
+
+        if (setuid(getuid()) != 0)
+            error(EXIT_FAILURE, errno, "setuid");
+
+        int enable = 1;
+        setsockopt(ping.sockfd, SOL_SOCKET, SO_BROADCAST, &enable, sizeof(enable));
+
+        // handle signals
+        signal(SIGINT, handler);
+
+        gettimeofday(&ping.stats.start_time, NULL);
+        
+        // print init message
+        printf("PING %s (%s): 56 data bytes",
+            ping.args.target, inet_ntoa(ping.addr.sin_addr));
+        if(ping.args.verbose)
+            printf(", id 0x%04x = %u", ping.pid, ping.pid);
+        printf("\n");
+
+        // loop send/recv
+        while (ping_running)
+        {
+            if (send_echo_icmp(&ping) == 0)
+                recv_echo_icmp(&ping);
     
-    // print init message
-    char ip_str[INET_ADDRSTRLEN];
-    inet_ntop(AF_INET, &ping.addr.sin_addr, ip_str, sizeof(ip_str));
-    if (ping.verbose)
-    {
-        long id = ping.pid;
-        printf("PING %s (%s) 56(84) bytes of data, id %lx = %d\n",
-            ping.target, ip_str, id, (int)id);
-    }
-    else
-        printf("PING %s (%s) %d(%d) bytes of data.\n", ping.target, inet_ntoa(ping.addr.sin_addr), 56, 84);
+            ping.seq++;
+    
+            if (!ping_running)
+                break;
+                
+            usleep(1000000); // 1 sec
+        }
 
-    // loop send/recv
-    while (ping_running)
-    {
-        if (send_echo_icmp(&ping) == 0)
-            recv_echo_icmp(&ping);
-
-        ping.seq++;
-
-        if (!ping_running)
-            break;
-            
-        usleep(1000000); // 1 sec
+        close(ping.sockfd);
+        print_stats(&ping);
     }
 
-    print_stats(&ping);
     return (0);
 }

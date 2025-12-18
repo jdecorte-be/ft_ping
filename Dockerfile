@@ -1,20 +1,16 @@
-FROM alpine:3.20
+FROM debian:wheezy
 
-# Install lightweight build tools
-RUN apk add --no-cache \
-    build-base \
-    linux-headers \
-    tcpdump \
-    iputils \
-    bash
+ENV DEBIAN_FRONTEND=noninteractive
 
-# Set working directory
-WORKDIR /app
+# Use archive repos and install build tools
+RUN echo "deb http://archive.debian.org/debian/ wheezy main contrib non-free" > /etc/apt/sources.list && \
+    echo "deb http://archive.debian.org/debian-security/ wheezy/updates main contrib non-free" >> /etc/apt/sources.list && \
+    apt-get -o Acquire::Check-Valid-Until=false update && \
+    apt-get install -y --no-install-recommends --allow-unauthenticated \
+        build-essential gcc make iputils-ping net-tools iproute vim sudo libc6-dev pkg-config \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Copy your ping project into the container
-COPY . .
 
-# Build your ping (modify if you use custom Makefile)
-RUN make || { echo "Build failed"; exit 1; }
+COPY . ./ft_ping
 
-CMD ["/bin/sh"]
+CMD ["/bin/bash"]

@@ -1,0 +1,15 @@
+version: "3.8"
+
+services:
+  ft_ping:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ft_ping:wheezy
+    container_name: ft_ping_wheezy
+    stdin_open: true
+    tty: true
+    volumes:
+      - .:/ft_ping
+    working_dir: /ft_ping
+    command: /bin/bash

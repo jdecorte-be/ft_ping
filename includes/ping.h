@@ -13,12 +13,20 @@
 #include <stdlib.h>
 #include <netinet/ip_icmp.h>
 #include <netinet/ip.h>
+#include <netinet/in.h>
 #include <math.h>
 #include <getopt.h>
+#include <error.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <argp.h>
 
 #define ICMP_ECHO       8
 #define ICMP_ECHOREPLY  0
 #define ICMP_BODY_SIZE 56
+
+typedef struct icmphdr icmphdr_t;
 
 typedef struct s_stats
 {
@@ -34,12 +42,20 @@ typedef struct s_stats
     double total_rtt_squared;
 }               t_stats;
 
+struct arguments
+{
+    char *target;
+    int verbose;
+};
+
+
 // ping struct
 typedef struct s_ping
 {
-    int verbose;
-    char *target;
     int sockfd;
+    int socktype;
+
+    struct arguments args;
 
     uint16_t seq;
     uint16_t pid;
@@ -51,8 +67,9 @@ typedef struct s_ping
 
 extern _Bool ping_running;
 
-int init_socket(t_ping *ping);
 int send_echo_icmp(t_ping *ping);
 int recv_echo_icmp(t_ping *ping);
+int print_stats(t_ping *ping);
+void print_usage(void);
 
 #endif

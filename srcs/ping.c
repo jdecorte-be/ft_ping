@@ -20,7 +20,6 @@ int checksum(uint16_t *buf, int len)
 int send_echo_icmp(t_ping *ping)
 {
     int sent_bytes;
-    static uint16_t seq = 0;
 
     // ** fill the packet **
 
@@ -39,8 +38,6 @@ int send_echo_icmp(t_ping *ping)
     // fill ICMP header 
     struct icmphdr *icmp_hdr = (struct icmphdr *)packet;
 
-    ping->pid = getpid() & 0xFFFF;
-
     icmp_hdr->type = ICMP_ECHO;
     icmp_hdr->un.echo.id = htons(ping->pid);
     icmp_hdr->un.echo.sequence = htons(ping->seq);
@@ -53,19 +50,17 @@ int send_echo_icmp(t_ping *ping)
     sent_bytes = sendto(
         /* socket */    ping->sockfd,
         /* buffer */    packet,
-        /* length */    64,
+        /* length */    sizeof(packet),
         /* flags */     0,
         /* dest addr */ (struct sockaddr *)&ping->addr,
         /* addr len */  sizeof(ping->addr)
     );
 
     if (sent_bytes < 0)
-    {
-        perror("sendto");
-        return (-1);
-    }
-    
+        error(EXIT_FAILURE, errno, "sending packet");
+
     ping->stats.n_sent++;
+    
     return (0);
 }
 
@@ -73,11 +68,26 @@ int recv_echo_icmp(t_ping *ping)
 {
     char recv_buf[1024];
     socklen_t addr_len = sizeof(ping->addr);
+    fd_set read_fds;
 
 
     // loop in case of wrong packets
     while (ping_running)
     {
+
+        FD_ZERO(&read_fds);
+        FD_SET(ping->sockfd, &read_fds);
+
+        struct timeval timeout = {1, 0}; // 1 sec
+        int ret = select(ping->sockfd + 1, &read_fds, NULL, NULL, &timeout);
+        if (ret < 0)
+        {
+            perror("select");
+            return (-1);
+        }
+        if (ret == 0) // timeout
+            return (-1);
+
         // receive packet
         int recv_bytes = recvfrom(
             /* socket */    ping->sockfd,
@@ -88,46 +98,28 @@ int recv_echo_icmp(t_ping *ping)
             /* addr len */  &addr_len
         );
         if (recv_bytes < 0)
-        {
-            if (errno == EINTR) {
-                return (0);
-            }
-            perror("recvfrom");
             return (-1);
-        }
 
-        // ** process reply ---
-        struct ip *ip_hdr = (struct ip *)recv_buf;
-        struct icmphdr *icmp_hdr = (struct icmphdr *)(recv_buf + (ip_hdr->ip_hl << 2));
+        // ** process reply **
 
-        int type = icmp_hdr->type;
-        int code = icmp_hdr->code;
-        int ttl = ip_hdr->ip_ttl;
-        uint16_t id, seq;
+        size_t hlen;
+        unsigned short cksum;
+        struct ip *ip;
+        icmphdr_t *icmp;
 
-        // handle time exceeded and dest unreachable
-        if (type == ICMP_TIME_EXCEEDED || type == ICMP_DEST_UNREACH)
-        {
-            // extract encapsulated ICMP header
-            struct ip *orig_ip_hdr = (struct ip *)(recv_buf + (ip_hdr->ip_hl << 2) + sizeof(struct icmphdr));
-            struct icmp *orig_icmp = (struct icmp *)((uint8_t *)orig_ip_hdr + (orig_ip_hdr->ip_hl << 2));
+        ip = (struct ip *)recv_buf;
+        hlen = ip->ip_hl << 2;
+        icmp = (icmphdr_t *)(recv_buf + hlen);
 
-            id = ntohs(orig_icmp->icmp_id);
-            seq = ntohs(orig_icmp->icmp_seq);
-        }
-        else
-        {
-            id = ntohs(icmp_hdr->un.echo.id);
-            seq = ntohs(icmp_hdr->un.echo.sequence);
-        }
 
-        // ignore, the packet is not for us
-        if (id != ping->pid)
-            continue;
 
-        // ignore, probably old packet ou duplicate
-        if (seq != ping->seq)
-            continue;
+        int type = icmp->type;
+        int code = icmp->code;
+        int ttl = ip->ip_ttl;
+        
+        // Extract ID and sequence for all packet types
+        uint16_t id = ntohs(icmp->un.echo.id);
+        uint16_t seq = ntohs(icmp->un.echo.sequence);
 
         // calcul RTT
         struct timeval recv_time;
@@ -135,43 +127,43 @@ int recv_echo_icmp(t_ping *ping)
         double rtt = (recv_time.tv_sec - ping->stats.send_time.tv_sec) * 1000.0 + 
             (recv_time.tv_usec - ping->stats.send_time.tv_usec) / 1000.0;
 
-        if (type == ICMP_ECHOREPLY)        
-        {
-            ping->stats.n_received++;
 
+        if (type == ICMP_ECHOREPLY || type == ICMP_TIMESTAMPREPLY || type == ICMP_ADDRESSREPLY)
+        {
+            if (ping->socktype == SOCK_RAW)
+            {
+                // verify it's for us
+                if (id != ping->pid)
+                    return -1;
+                
+                // verify checksum
+                cksum = icmp->checksum;
+                icmp->checksum = 0;
+                if (cksum != checksum((uint16_t *)icmp, recv_bytes - hlen))
+                {
+                    icmp->checksum = cksum; // restore
+                    fprintf(stderr, "checksum mismatch from %s\n", 
+                            inet_ntoa(ping->addr.sin_addr));
+                    return -1;
+                }
+                icmp->checksum = cksum; // restore
+            }
+
+            ping->stats.n_received++;
             ping->stats.min_rtt = fmin(ping->stats.min_rtt, rtt);
             ping->stats.max_rtt = fmax(ping->stats.max_rtt, rtt);
             ping->stats.total_rtt += rtt;
             ping->stats.total_rtt_squared += rtt * rtt;
-
+            
             printf("%d bytes from %s: icmp_seq=%d ttl=%d time=%.3f ms\n",
-                recv_bytes - (ip_hdr->ip_hl << 2),
+                recv_bytes - (ip->ip_hl << 2),
                 inet_ntoa(ping->addr.sin_addr),
-                ntohs(icmp_hdr->un.echo.sequence),
-                ip_hdr->ip_ttl,
-                rtt
-            );
-            return 0;
-        }
-        else if (type == ICMP_TIME_EXCEEDED)
-        {
-            printf("From %s icmp_seq=%d Time to live exceeded\n",
-                inet_ntoa(ping->addr.sin_addr),
-                seq
-            );
-            return -1;
-        }
-        else if (type == ICMP_DEST_UNREACH)
-        {
-            printf("From %s icmp_seq=%d Destination unreachable (code %d)\n",
-                inet_ntoa(ping->addr.sin_addr),
-                seq,
-                code
-            );
-            return -1;
+                ntohs(icmp->un.echo.sequence),
+                ip->ip_ttl,
+                rtt);
+            
+            return (0);
         }
     }
-
-
     return (0);
 }
