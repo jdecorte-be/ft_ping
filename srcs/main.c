@@ -9,6 +9,40 @@ void handler(int signum)
 }
 
 
+// **
+// ** Print ping statistics
+// **
+int print_stats(t_ping *ping)
+{
+    // print the statistics
+    struct timeval end_time, diff;
+	gettimeofday(&end_time, NULL);
+	timersub(&end_time, &ping->stats.start_time, &diff);
+	long total_ms = diff.tv_sec * 1000 + diff.tv_usec / 1000;
+
+    printf("--- %s ping statistics ---\n", ping->args.target);
+    printf("%d packets transmitted, %d packets received, %.0f%% packet loss\n",
+        ping->stats.n_sent,
+        ping->stats.n_received,
+        (1.0 - (double)ping->stats.n_received / ping->stats.n_sent) * 100.0
+    );
+
+    if (ping->stats.n_received)
+    {
+        double avg = ping->stats.total_rtt / ping->stats.n_received;
+
+        double var = (ping->stats.total_rtt_squared / ping->stats.n_received) - (avg * avg);
+        double mdev = sqrt(var > 0 ? var : 0);
+
+        printf("round-trip min/avg/max/stddev = %.3f/%.3f/%.3f/%.3f ms\n",
+            ping->stats.min_rtt,
+            avg,
+            ping->stats.max_rtt,
+            mdev
+        );
+    }
+    return 0;
+}
 
 // **
 // ** Parse command line arguments
@@ -45,6 +79,10 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state)
     return 0;
 }
 
+
+// **
+// ** Resolve hostname to IP address
+// **
 int resolve_host(t_ping *ping)
 {
     struct addrinfo hints = {0};
@@ -153,9 +191,11 @@ int main(int ac, char **av)
         if (init_socket(&ping) < 0)
             return (2);
 
+        // drop privileges
         if (setuid(getuid()) != 0)
             error(EXIT_FAILURE, errno, "setuid");
 
+        // enable broadcast option
         int enable = 1;
         setsockopt(ping.sockfd, SOL_SOCKET, SO_BROADCAST, &enable, sizeof(enable));
 
