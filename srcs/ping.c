@@ -1,33 +1,50 @@
 #include "ping.h"
 
+/**
+ * @brief Calculate the Internet Checksum (RFC 1071)
+ * 
+ * @param buf Pointer to the data buffer
+ * @param len Length of the data in bytes
+ * @return int The 16-bit one's complement sum
+ */
 int checksum(uint16_t *buf, int len)
 {
     uint32_t sum = 0;
+
+    // -- sum 16-bit words --
     while (len > 1)
     {
         sum += *buf++;
         len -= 2;
     }
+
+    // -- handle odd byte --
     if (len == 1)
     {
         sum += *(uint8_t *)buf;
     }
+
+    // -- fold 32-bit sum to 16 bits --
     sum = (sum >> 16) + (sum & 0xFFFF);
     sum += (sum >> 16);
     return (uint16_t)(~sum);
 }
 
+/**
+ * @brief Construct and send an ICMP Echo Request packet
+ * 
+ * @param ping Pointer to the ping session structure
+ * @return int 0 on success, -1 on error
+ */
 int send_echo_icmp(t_ping *ping)
 {
     int sent_bytes;
 
-    // ** fill the packet **
-
-    // header + body size
+    // -- prepare packet buffer --
     uint8_t packet[sizeof(struct icmphdr) + ICMP_BODY_SIZE];
     memset(packet, 0, sizeof(packet));
 
-    // fill timestamp
+    // -- fill timestamp --
     struct timeval *ts = (struct timeval *)(packet + sizeof(struct icmphdr));
     if (gettimeofday(ts, NULL) < 0)
     {
@@ -35,7 +52,7 @@ int send_echo_icmp(t_ping *ping)
         return (-1);
     }
 
-    // fill ICMP header 
+    // -- fill ICMP header --
     struct icmphdr *icmp_hdr = (struct icmphdr *)packet;
 
     icmp_hdr->type = ICMP_ECHO;
@@ -43,10 +60,9 @@ int send_echo_icmp(t_ping *ping)
     icmp_hdr->un.echo.sequence = htons(ping->seq);
     icmp_hdr->checksum = checksum((uint16_t *)packet, sizeof(packet));
 
-    // save send time
     gettimeofday(&ping->stats.send_time, NULL);
 
-    // ** send packet **
+    // -- send packet --
     sent_bytes = sendto(
         /* socket */    ping->sockfd,
         /* buffer */    packet,
@@ -64,17 +80,21 @@ int send_echo_icmp(t_ping *ping)
     return (0);
 }
 
+/**
+ * @brief Receive and process ICMP Echo Reply packets
+ * 
+ * @param ping Pointer to the ping session structure
+ * @return int 0 on success, -1 on timeout or error
+ */
 int recv_echo_icmp(t_ping *ping)
 {
     char recv_buf[1024];
     socklen_t addr_len = sizeof(ping->addr);
     fd_set read_fds;
 
-
-    // loop in case of wrong packets
+    // -- wait for incoming data --
     while (ping_running)
     {
-
         FD_ZERO(&read_fds);
         FD_SET(ping->sockfd, &read_fds);
 
@@ -88,7 +108,7 @@ int recv_echo_icmp(t_ping *ping)
         if (ret == 0) // timeout
             return (-1);
 
-        // receive packet
+        // -- receive data --
         int recv_bytes = recvfrom(
             /* socket */    ping->sockfd,
             /* buffer */    recv_buf,
@@ -100,8 +120,7 @@ int recv_echo_icmp(t_ping *ping)
         if (recv_bytes < 0)
             return (-1);
 
-        // ** process reply **
-
+        // -- process reply --
         size_t hlen;
         unsigned short cksum;
         struct ip *ip;
@@ -111,32 +130,29 @@ int recv_echo_icmp(t_ping *ping)
         hlen = ip->ip_hl << 2;
         icmp = (icmphdr_t *)(recv_buf + hlen);
 
-
-
         int type = icmp->type;
         int code = icmp->code;
         int ttl = ip->ip_ttl;
         
-        // Extract ID and sequence for all packet types
         uint16_t id = ntohs(icmp->un.echo.id);
         uint16_t seq = ntohs(icmp->un.echo.sequence);
 
-        // calcul RTT
+        // -- calculate RTT --
         struct timeval recv_time;
         gettimeofday(&recv_time, NULL);
         double rtt = (recv_time.tv_sec - ping->stats.send_time.tv_sec) * 1000.0 + 
             (recv_time.tv_usec - ping->stats.send_time.tv_usec) / 1000.0;
 
-
+        // -- handle ICMP type --
         if (type == ICMP_ECHOREPLY || type == ICMP_TIMESTAMPREPLY || type == ICMP_ADDRESSREPLY)
         {
             if (ping->socktype == SOCK_RAW)
             {
-                // verify it's for us
+                // -- verify identity --
                 if (id != ping->pid)
                     return -1;
                 
-                // verify checksum
+                // -- verify checksum --
                 cksum = icmp->checksum;
                 icmp->checksum = 0;
                 if (cksum != checksum((uint16_t *)icmp, recv_bytes - hlen))
@@ -149,6 +165,7 @@ int recv_echo_icmp(t_ping *ping)
                 icmp->checksum = cksum; // restore
             }
 
+            // -- update stats and print --
             ping->stats.n_received++;
             ping->stats.min_rtt = fmin(ping->stats.min_rtt, rtt);
             ping->stats.max_rtt = fmax(ping->stats.max_rtt, rtt);
