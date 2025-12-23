@@ -1,7 +1,7 @@
 #!/bin/bash
 
 FT_PING="./ft_ping"
-SYS_PING=$(command -v ./ping)
+SYS_PING=$(command -v ping)
 TIMEOUT_DURATION=2
 TOLERANCE_MS=30
 OUT_DIR="output"
@@ -10,59 +10,59 @@ rm -rf "$OUT_DIR"
 mkdir -p "$OUT_DIR"
 
 test_cases=(
+    # --- Standard Success Cases ---
     "8.8.8.8"
     "google.com"
     "localhost"
     "127.0.0.1"
+    "1.1.1.1"
+
+    # --- Flag Testing: -v (Verbose) ---
+    "-v 8.8.8.8"
+    "-v localhost"
+    "127.0.0.1 -v"
+    "-v -v 127.0.0.1"
+    "-v google.com"
+
+    # --- Flag Testing: -? (Help) ---
+    "-?"
+    "8.8.8.8 -?"
+    "-? -v"
+    "-v -?"
+
+    # --- Signal Handling (Interrupted by timeout) ---
+    "127.0.0.1"
+    "-v 127.0.0.1"
+    "amazon.com"
+
+    # --- Error Handling: DNS & Addresses ---
     "notarealhost.tld"
     "999.999.999.999"
-    "-v 8.8.8.8"
-    "-v google.com"
-    "-?"
+    "google..com"
+    "a."
+    ".google.com"
+    "255.255.255.255"
+    "0.0.0.0"
+    "0"
+    "127.1"
+    "127.0.0.1.1"
+    "1.2.3"
+    ""
+    " "
+    "--"
+
+    # --- Invalid Flags (Should trigger help/error) ---
+    "-x"
+    "-v -x"
     "-h"
     "--help"
-	"-2"
-)
+    "-4"
 
-# invalid or unsupported options
-test_cases+=(
-    "-x"
-    "-vv"
-    "-vh"
-    "-hv"
-    "--verbose"
-    "-help"
-    "-?"
-    "-H"
-)
-
-# destination edge cases
-test_cases+=(
-    "255.255.255.255 "
-    "2"
-    "0.0.0.0"
-    "127.1"
-    "127"
-    "1.1.1"
-    "1.1.1.1.1"
-    "256.1.1.1"
-    "01.02.03.004"
-    "8.8.8"
-    ".8.8.8.8"
-    "8.8.8.8."
-)
-
-# dns edge cases
-test_cases+=(
-    "localhost."
-    "localhost.."
-    ".localhost"
-    "google..com"
-    "google"
-    "a"
-    "a."
-    "example.invalid"
-    "example.test"
+    # --- Network Edge Cases ---
+    "224.0.0.1"
+    "169.254.0.1"
+    "long-hostname-$(printf 'a%.0s' {1..100}).com"
+    "127.0.0.1 -v"
 )
 
 SELECTED_TEST=""
@@ -156,16 +156,19 @@ run_test() {
     sys_time=$(extract_time_ms "$sys_out")
 
     if [[ -n "$ft_time" && -n "$sys_time" ]]; then
-        diff=$(abs_diff_ms "$ft_time" "$sys_time")
-        if awk -v d="$diff" -v tol="$TOLERANCE_MS" 'BEGIN{exit(d>tol)}'; then
-            echo -e "${GREEN}[RTT PASS]${NC} ft=${ft_time}ms sys=${sys_time}ms diff=${diff}ms"
+        diff=$(echo "if ($ft_time > $sys_time) $ft_time - $sys_time else $sys_time - $ft_time" | bc -l)
+
+        is_passing=$(echo "$diff <= $TOLERANCE_MS" | bc -l)
+
+        if (( is_passing )); then
+            printf "${GREEN}[RTT PASS]${NC} ft=%sms sys=%sms diff=%sms\n" "$ft_time" "$sys_time" "$diff"
             time_pass="PASS"
         else
-            echo -e "${RED}[RTT FAIL]${NC} ft=${ft_time}ms sys=${sys_time}ms diff=${diff}ms"
+            printf "${RED}[RTT FAIL]${NC} ft=%sms sys=%sms diff=%sms\n" "$ft_time" "$sys_time" "$diff"
             time_pass="FAIL"
         fi
     else
-        echo -e "${GRAY}[RTT N/A]${NC} (missing time in one or both outputs)"
+        echo -e "${GRAY}[RTT N/A]${NC} (missing output)"
     fi
 
     # Compare outputs and exit codes

@@ -204,7 +204,11 @@ int main(int ac, char **av)
 
         // -- configure socket options --
         int enable = 1;
-        setsockopt(ping.sockfd, SOL_SOCKET, SO_BROADCAST, &enable, sizeof(enable));
+        if (setsockopt(ping.sockfd, SOL_SOCKET, SO_BROADCAST, &enable, sizeof(enable)) < 0)
+            perror("setsockopt SO_BROADCAST");
+
+        if (setsockopt(ping.sockfd, IPPROTO_IP, IP_RECVTTL, &enable, sizeof(enable)) < 0)
+            perror("setsockopt IP_RECVTTL");
 
         // -- setup signal handling --
         signal(SIGINT, handler);
