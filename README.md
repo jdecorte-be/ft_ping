@@ -1,6 +1,6 @@
 
 <h1 align="center">
-  <a href="https://github.com/jdecorte-be/ft_ping"><img src="-b" alt="ft_ping" ></a>
+  <a href="https://github.com/jdecorte-be/ft_ping"><img src="assets/banner.png" alt="ft_ping" ></a>
   ft_ping
   <br>
 </h1>
