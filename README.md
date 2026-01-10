@@ -44,105 +44,103 @@
 </p>
 
 
-This is a professional `README.md` template for your **ft_ping** project, tailored to the files provided and the typical requirements of this 42 Network project.
+This is a professional `README.md` template tailored for your **ft_ping** project. Since `ft_ping` is a classic system programming project (often associated with the 42 school curriculum), this documentation focuses on network programming, raw sockets, and the ICMP protocol.
 
----
+***
 
 # ft_ping
 
-A custom implementation of the standard network utility `ping` written in C. This project focuses on low-level network programming, raw sockets, and the ICMP protocol.
-
-![C](https://img.shields.io/badge/language-C-blue.svg)
-![Network](https://img.shields.io/badge/network-ICMP-orange.svg)
-![Docker](https://img.shields.io/badge/docker-ready-brightgreen.svg)
+![Banner](assets/banner.png)
 
 ## 📝 Overview
+**ft_ping** is a custom implementation of the standard `ping` utility. It is designed to test the reachability of a host on an Internet Protocol (IP) network and to measure the round-trip time (RTT) for messages sent from the originating host to a destination computer.
 
-`ft_ping` is a command-line utility used to test the reachability of a host on an Internet Protocol (IP) network. It measures the round-trip time (RTT) for messages sent from the originating host to a destination computer that are echoed back to the source.
-
-The project replicates the core functionality of the system's `ping` command by:
-- Creating and managing **Raw Sockets** (`SOCK_RAW`).
-- Constructing **ICMP Echo Request** packets.
-- Handling **ICMP Echo Reply** packets.
-- Calculating precise timing and packet loss statistics.
+This project focuses on **network programming** using **C**, specifically utilizing **Raw Sockets** to construct and send ICMP (Internet Control Message Protocol) packets and parse the received responses.
 
 ## ✨ Features
+- **ICMP Protocol:** Manual construction of ICMP ECHO_REQUEST packets.
+- **DNS Resolution:** Support for both IP addresses and hostnames (e.g., `google.com`).
+- **Statistical Analysis:** Calculates and displays:
+  - Packet loss percentage.
+  - Round-trip time (min/avg/max/mdev).
+- **Custom Options:**
+  - `-v`: Verbose output.
+  - `-h`: Display help/usage.
+  - (Add any other flags you implemented, e.g., `-c` for count or `-t` for TTL).
+- **Signal Handling:** Graceful termination and final statistics display on `Ctrl+C`.
+- **Docker Integration:** Easy testing in a controlled environment.
 
-- **DNS Resolution**: Supports both IP addresses and hostnames.
-- **ICMP Protocol**: Manual construction of ICMP headers.
-- **Verbose Mode**: Detailed output including IP header information.
-- **Statistics reporting**: Summary of packets sent/received, packet loss percentage, and RTT (min/avg/max/mdev).
-- **Graceful handling**: Responds to `SIGINT` (Ctrl+C) to display final statistics.
-- **Customizable**: Support for common flags (e.g., `-v` for verbose).
-
-## 🚀 Installation
+## 🛠 Installation
 
 ### Prerequisites
 - A Linux-based environment.
-- `gcc` and `make`.
-- **Root privileges**: Since the program uses raw sockets, it must be run with `sudo` or have the `CAP_NET_RAW` capability.
+- `gcc` compiler.
+- `make` build tool.
+- **Root privileges** (required for using Raw Sockets).
 
-### Building the project
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/your-username/ft_ping.git
-   cd ft_ping
-   ```
-2. Compile using the Makefile:
-   ```bash
-   make
-   ```
+### Build
+Clone the repository and compile the project:
+```bash
+git clone https://github.com/your-username/ft_ping.git
+cd ft_ping
+make
+```
 
-### Using Docker
-If you prefer an isolated environment, use the provided Docker configuration:
+### Docker (Alternative)
+If you prefer to run it inside a container to avoid polluting your host system:
 ```bash
 docker-compose up --build
 ```
 
-## 🛠 Usage
+## 🚀 Usage
+Because the program uses **Raw Sockets**, it must be executed with root privileges (sudo):
 
 ```bash
-sudo ./ft_ping [options] <destination>
+sudo ./ft_ping <destination> [options]
+```
+
+### Examples
+**Basic usage:**
+```bash
+sudo ./ft_ping google.com
+```
+
+**Verbose mode:**
+```bash
+sudo ./ft_ping 8.8.8.8 -v
 ```
 
 ### Options
-- `<destination>`: The hostname or IP address to ping.
-- `-v`: Verbose output (displays ICMP packets that are not Echo Replies).
-- `-h`: Display help/usage information.
+| Flag | Description |
+| :--- | :--- |
+| `-v` | Verbose output (displays ICMP headers, etc.) |
+| `-h` | Display usage information |
 
-### Example
-```bash
-$ sudo ./ft_ping google.com
-PING google.com (142.250.184.238): 56 data bytes
-64 bytes from 142.250.184.238: icmp_seq=1 ttl=117 time=14.221 ms
-64 bytes from 142.250.184.238: icmp_seq=2 ttl=117 time=13.845 ms
-^C
---- google.com ping statistics ---
-2 packets transmitted, 2 packets received, 0% packet loss
-round-trip min/avg/max/stddev = 13.845/14.033/14.221/0.188 ms
+## 📂 Project Structure
+```text
+.
+├── includes/          # Header files (.h)
+│   └── ping.h
+├── srcs/              # Source files (.c)
+│   ├── main.c         # Entry point and argument parsing
+│   └── ping.c         # Core logic (socket creation, send/recv)
+├── assets/            # Project images and banners
+├── Dockerfile         # Docker configuration
+├── docker-compose.yml # Docker Compose orchestration
+├── Makefile           # Compilation rules
+├── tester.sh          # Automated testing script
+└── LICENSE            # Project license
 ```
 
-## 📁 Project Structure
-
-| File/Folder | Description |
-| :--- | :--- |
-| `srcs/main.c` | Entry point, argument parsing, and signal handling. |
-| `srcs/ping.c` | Core logic: packet construction, sending/receiving, and timing. |
-| `includes/ping.h`| Structures, macros, and function prototypes. |
-| `Makefile` | Build instructions (all, clean, fclean, re). |
-| `Dockerfile` | Container configuration for testing. |
-| `tester.sh` | Automated test suite to verify functionality and edge cases. |
-
 ## 🧪 Testing
-The project includes a `tester.sh` script to validate the implementation against the system's native ping and check for memory leaks or crashes.
-
+A testing script is provided to validate the program against different network scenarios:
 ```bash
 chmod +x tester.sh
 sudo ./tester.sh
 ```
 
 ## 📜 License
-This project is licensed under the [MIT License](LICENSE) - see the LICENSE file for details. (Note: Replace this with your preferred license).
+This project is licensed under the terms of the [LICENSE](LICENSE) file.
 
 ---
-*This project was developed as part of the curriculum at 42 Network.*
+*Developed as part of a system programming curriculum.*
