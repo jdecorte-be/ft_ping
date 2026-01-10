@@ -44,114 +44,114 @@
 </p>
 
 
-This is a professional `README.md` template for your **ft_ping** project. It is designed to reflect the technical nature of a 42 Network project while remaining clear for any developer.
-
----
-
-# README.md
-
-```markdown
 # ft_ping
 
-![Build Status](https://img.shields.io/badge/Language-C-blue.svg)
-![Platform](https://img.shields.io/badge/Platform-Linux-orange.svg)
-![License](https://img.shields.io/badge/License-MIT-green.svg)
+![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
+![Language](https://img.shields.io/badge/language-C-orange.svg)
+![Platform](https://img.shields.io/badge/platform-Linux-lightgrey.svg)
 
-A custom implementation of the classic `ping` network utility. This project focuses on low-level network programming using raw sockets to send ICMP ECHO_REQUEST packets and handle ECHO_RESPONSE replies.
+A custom implementation of the system `ping` utility, developed in C. This project focuses on network programming using raw sockets to send and receive ICMP (Internet Control Message Protocol) packets.
 
 ![Banner](assets/banner.png)
 
 ## 📝 Overview
 
-`ft_ping` is a command-line utility developed to replicate the core functionality of the system `ping` command. By interacting directly with the IP layer via raw sockets, the tool measures round-trip time (RTT), detects packet loss, and provides network statistics for a given host.
+`ft_ping` is a command-line tool that verifies the reachability of a host on an Internet Protocol (IP) network. It measures the round-trip time (RTT) for messages sent from the originating host to a destination computer that are echoed back to the source.
 
-This project was built to explore:
-- **Raw Sockets:** Using `socket(AF_INET, SOCK_RAW, IPPROTO_ICMP)`.
-- **ICMP Protocol:** Constructing and parsing ICMP headers.
-- **Signal Handling:** Managing interruptions (SIGINT) to display final statistics.
-- **Network Calculations:** Precise timing and standard deviation (mdev) calculation for RTT.
+This project replicates the core functionality of the standard `iputils-ping`, including packet construction, checksum calculation, and statistical analysis.
 
 ## ✨ Features
 
-- **IPv4 Support:** Ping hosts via IP address or DNS hostname.
-- **Packet Statistics:** Displays transmitted/received packets, percentage of loss, and elapsed time.
-- **RTT Metrics:** Calculates Min, Avg, Max, and Mdev (Mean Absolute Deviation).
-- **Custom Options:** (Modify as per your implementation)
-  - `-v`: Verbose output.
-  - `-c <count>`: Stop after sending $N$ packets.
-  - `-h`: Help menu.
-- **Dockerized Environment:** Includes a Dockerfile and Compose setup for testing in isolated network environments.
+- **ICMP Echo Requests:** Sends standard ICMP Type 8 packets.
+- **DNS Resolution:** Supports both IP addresses and hostnames.
+- **RTT Statistics:** Calculates minimum, average, maximum, and standard deviation (mdev) of round-trip times.
+- **Signal Handling:** Gracefully handles `SIGINT` (Ctrl+C) to display final statistics.
+- **Verbose Mode:** Optional verbose output for debugging and detailed packet information.
+- **Docker Support:** Includes Dockerfile and Docker Compose for testing in a controlled network environment.
 
-## 🚀 Installation
+## 🛠 Installation
 
 ### Prerequisites
-- A Linux-based environment.
-- `gcc` and `make`.
-- **Root privileges:** Required to open raw sockets.
+
+- A Linux-based operating system.
+- `gcc` compiler and `make`.
+- Root privileges (required for opening **RAW Sockets**).
 
 ### Build
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/ft_ping.git
-   cd ft_ping
-   ```
-2. Compile the project:
-   ```bash
-   make
-   ```
 
-## 🛠 Usage
+Clone the repository and compile the project using the provided `Makefile`:
 
-Basic usage:
 ```bash
-sudo ./ft_ping google.com
+git clone https://github.com/yourusername/ft_ping.git
+cd ft_ping
+make
 ```
 
-### Options
-| Flag | Description |
-|------|-------------|
-| `-v` | Verbose mode: display ICMP packets that are not ECHO_REPLY. |
-| `-c` | Stop after sending a specific number of ECHO_REQUEST packets. |
-| `-h` | Display usage instructions and exit. |
+### Environment (Docker)
 
-### Running with Docker
-If you want to test the application in a containerized environment:
+If you prefer to run the project in a containerized environment:
+
 ```bash
 docker-compose up --build
 ```
 
-### Running Tests
-A `tester.sh` script is provided to validate the output against the system's native ping:
+## 🚀 Usage
+
+The binary requires root privileges to handle raw sockets.
+
 ```bash
-bash tester.sh
+sudo ./ft_ping <destination> [options]
 ```
 
-## 📁 Project Structure
+### Examples
+
+**Basic Ping:**
+```bash
+sudo ./ft_ping google.com
+```
+
+**Verbose Output:**
+```bash
+sudo ./ft_ping 8.8.8.8 -v
+```
+
+### Help
+```text
+Usage: ft_ping [DESTINATION] [-v]
+Options:
+  <destination>     dns name or ip address
+  -v, --verbose     verbose output
+```
+
+## 📂 Project Structure
 
 ```text
 .
-├── assets/               # Media resources (banners, screenshots)
-├── includes/             # Header files
-│   └── ping.h            # Main project definitions and structures
-├── srcs/                 # Source files
-│   ├── main.c            # Entry point and argument parsing
-│   └── ping.c            # ICMP logic and socket management
-├── Dockerfile            # Container definition
-├── docker-compose.yml    # Orchestration for testing
-├── Makefile              # Compilation instructions
-├── tester.sh             # Automated testing script
-└── LICENSE               # Project license
+├── assets/             # Project media and banners
+├── includes/           # Header files
+│   └── ping.h          # Main definitions and structures
+├── srcs/               # Source files
+│   ├── main.c          # Entry point and argument parsing
+│   └── ping.c          # ICMP logic and socket handling
+├── Dockerfile          # Container definition
+├── docker-compose.yml  # Container orchestration
+├── Makefile            # Build instructions
+├── tester.sh           # Automated testing script
+└── LICENSE             # Project license
 ```
 
-## ⚖️ License
+## 🧪 Testing
 
-This project is licensed under the [MIT License](LICENSE) - see the file for details.
+A `tester.sh` script is provided to validate the program against various scenarios (valid hosts, invalid hosts, unreachable networks).
+
+```bash
+chmod +x tester.sh
+sudo ./tester.sh
+```
+
+## 📄 License
+
+This project is licensed under the [LICENSE](LICENSE) - see the file for details.
 
 ---
-*Developed as part of the 42 Network curriculum.*
-```
-
-### Tips for Customization:
-1.  **Banner:** If you don't have a banner yet, you can create one or remove the image tag.
-2.  **Flags:** I included standard flags like `-v` and `-c`. If your implementation uses different flags (e.g., `-t` for TTL or `-i` for interval), update the **Usage** table.
-3.  **Permissions:** Since raw sockets require `CAP_NET_RAW`, emphasize the use of `sudo` in the usage section.
+*This project was developed as part of a systems programming curriculum to understand the depths of the OSI Model and Network Layer protocols.*
