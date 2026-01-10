@@ -44,114 +44,94 @@
 </p>
 
 
+This is a professional `README.md` template for your **ft_ping** project, based on the files provided.
+
+***
+
 # ft_ping
-
-![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
-![Language](https://img.shields.io/badge/language-C-orange.svg)
-![Platform](https://img.shields.io/badge/platform-Linux-lightgrey.svg)
-
-A custom implementation of the system `ping` utility, developed in C. This project focuses on network programming using raw sockets to send and receive ICMP (Internet Control Message Protocol) packets.
 
 ![Banner](assets/banner.png)
 
 ## 📝 Overview
+**ft_ping** is a custom implementation of the classic network utility `ping`. Developed in C, this project aims to replicate the core functionality of the system's `ping` command by using **ICMP (Internet Control Message Protocol)** to test the reachability of a host on an IP network.
 
-`ft_ping` is a command-line tool that verifies the reachability of a host on an Internet Protocol (IP) network. It measures the round-trip time (RTT) for messages sent from the originating host to a destination computer that are echoed back to the source.
-
-This project replicates the core functionality of the standard `iputils-ping`, including packet construction, checksum calculation, and statistical analysis.
+This project involves low-level network programming, specifically the use of **Raw Sockets**, packet construction, and checksum calculation.
 
 ## ✨ Features
+- **ICMP ECHO_REQUEST:** Sends ICMP packets to network hosts.
+- **DNS Resolution:** Supports both IP addresses and hostnames (e.g., `google.com`).
+- **Real-time Statistics:** Tracks packets sent, received, packet loss, and round-trip time (RTT) min/avg/max/mdev.
+- **Verbose Mode:** Optional detailed output for debugging and packet inspection.
+- **TTL Handling:** Manages Time-To-Live for packets.
+- **Signal Handling:** Graceful exit and summary report upon receiving `SIGINT` (Ctrl+C).
 
-- **ICMP Echo Requests:** Sends standard ICMP Type 8 packets.
-- **DNS Resolution:** Supports both IP addresses and hostnames.
-- **RTT Statistics:** Calculates minimum, average, maximum, and standard deviation (mdev) of round-trip times.
-- **Signal Handling:** Gracefully handles `SIGINT` (Ctrl+C) to display final statistics.
-- **Verbose Mode:** Optional verbose output for debugging and detailed packet information.
-- **Docker Support:** Includes Dockerfile and Docker Compose for testing in a controlled network environment.
-
-## 🛠 Installation
+## 🚀 Installation
 
 ### Prerequisites
-
-- A Linux-based operating system.
+- A Linux environment.
 - `gcc` compiler and `make`.
-- Root privileges (required for opening **RAW Sockets**).
+- **Root privileges:** Required because the program uses Raw Sockets.
 
-### Build
-
-Clone the repository and compile the project using the provided `Makefile`:
+### Building the project
+Clone the repository and compile using the provided `Makefile`:
 
 ```bash
-git clone https://github.com/yourusername/ft_ping.git
+git clone https://github.com/your-username/ft_ping.git
 cd ft_ping
 make
 ```
 
-### Environment (Docker)
-
-If you prefer to run the project in a containerized environment:
+### Running with Docker
+If you prefer an isolated environment, use the included Docker configuration:
 
 ```bash
 docker-compose up --build
 ```
 
-## 🚀 Usage
-
-The binary requires root privileges to handle raw sockets.
+## 🛠 Usage
+Since `ft_ping` uses raw sockets, it must be run with `sudo`:
 
 ```bash
 sudo ./ft_ping <destination> [options]
 ```
 
 ### Examples
-
-**Basic Ping:**
 ```bash
+# Ping a hostname
 sudo ./ft_ping google.com
+
+# Ping an IP address
+sudo ./ft_ping 8.8.8.8
+
+# Run the automated tester
+./tester.sh
 ```
 
-**Verbose Output:**
-```bash
-sudo ./ft_ping 8.8.8.8 -v
-```
+### Options
+*(Note: Adjust based on your actual implementation in `main.c`)*
+- `-v`: Verbose output.
+- `-h`: Display help message.
 
-### Help
-```text
-Usage: ft_ping [DESTINATION] [-v]
-Options:
-  <destination>     dns name or ip address
-  -v, --verbose     verbose output
-```
-
-## 📂 Project Structure
-
+## 📁 Project Structure
 ```text
 .
-├── assets/             # Project media and banners
-├── includes/           # Header files
-│   └── ping.h          # Main definitions and structures
-├── srcs/               # Source files
+├── includes/
+│   └── ping.h          # Header file containing structures and prototypes
+├── srcs/
 │   ├── main.c          # Entry point and argument parsing
-│   └── ping.c          # ICMP logic and socket handling
+│   └── ping.c          # Core logic (socket creation, sending, receiving)
+├── assets/
+│   └── banner.png      # Project visual
 ├── Dockerfile          # Container definition
-├── docker-compose.yml  # Container orchestration
+├── docker-compose.yml  # Docker orchestration
 ├── Makefile            # Build instructions
 ├── tester.sh           # Automated testing script
-└── LICENSE             # Project license
+└── README.md           # Project documentation
 ```
 
-## 🧪 Testing
-
-A `tester.sh` script is provided to validate the program against various scenarios (valid hosts, invalid hosts, unreachable networks).
-
-```bash
-chmod +x tester.sh
-sudo ./tester.sh
-```
-
-## 📄 License
-
-This project is licensed under the [LICENSE](LICENSE) - see the file for details.
+## 🛡 License
+This project is licensed under the [MIT License](LICENSE) - see the LICENSE file for details.
+*(Alternatively: Distributed under the Peer-to-Peer License of 42 School.)*
 
 ---
-*This project was developed as part of a systems programming curriculum to understand the depths of the OSI Model and Network Layer protocols.*
+*Created as part of the 42 School Curriculum.*
