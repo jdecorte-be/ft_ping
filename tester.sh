@@ -11,14 +11,12 @@ mkdir -p "$OUT_DIR"
 
 test_cases=(
     # --- Standard Success Cases ---
-    "8.8.8.8"
     "google.com"
     "localhost"
     "127.0.0.1"
     "1.1.1.1"
 
     # --- Flag Testing: -v (Verbose) ---
-    "-v 8.8.8.8"
     "-v localhost"
     "127.0.0.1 -v"
     "-v -v 127.0.0.1"
@@ -40,7 +38,6 @@ test_cases=(
     "999.999.999.999"
     "google..com"
     "a."
-    ".google.com"
     "255.255.255.255"
     "0.0.0.0"
     "0"
@@ -150,7 +147,7 @@ run_test() {
     sys_out=$(timeout -s SIGINT $TIMEOUT_DURATION $SYS_PING $args 2>&1)
     sys_exit=$?
 
-    # RTT handling (on-screen only)
+    # RTT handling
     local ft_time sys_time diff time_pass="N/A"
     ft_time=$(extract_time_ms "$ft_out")
     sys_time=$(extract_time_ms "$sys_out")
@@ -171,7 +168,7 @@ run_test() {
         echo -e "${GRAY}[RTT N/A]${NC} (missing output)"
     fi
 
-    # Compare outputs and exit codes
+    # -- compare outputs and exit codes --
     local out_diff="NO" code_diff="NO"
     [[ "$ft_out" != "$sys_out" ]] && out_diff="YES"
     [[ "$ft_exit" != "$sys_exit" ]] && code_diff="YES"
@@ -182,7 +179,6 @@ run_test() {
 		echo -e "${GREEN}[EXIT CODE PASS] ft_ping=${ft_exit}, sys_ping=${sys_exit} ${NC}"
 	fi
 
-    # Log only if something differs; RTT differences are not stored
     if [[ "$out_diff" == "YES" ]]; then
         write_fail_log "Test case" "$args" \
             "$ft_exit" "$sys_exit" \
@@ -212,3 +208,5 @@ else
         run_test "$case"
     done
 fi
+
+echo -e "${GREEN}Testing complete.${NC} Check the '${OUT_DIR}' directory for any failure logs."

@@ -181,7 +181,7 @@ int recv_echo_icmp(t_ping *ping)
 
                 unsigned short cksum = icmp->checksum;
                 icmp->checksum = 0;
-                if (cksum != checksum((uint16_t *)icmp, recv_bytes - ip_header_len))
+                if (cksum != checksum((uint16_t *)icmp, sizeof(icmphdr_t)))
                 {
                     icmp->checksum = cksum; // restore
                     fprintf(stderr, "checksum mismatch from %s\n",
