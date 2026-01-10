@@ -1,6 +1,6 @@
 
 <h1 align="center">
-  <a href="https://github.com/jdecorte-be/ft_ping"><img src="assets/banner.png" alt="ft_ping" ></a>
+  <a href="https://github.com/jdecorte-be/ft_ping"><img src="-b" alt="ft_ping" ></a>
   ft_ping
   <br>
 </h1>
@@ -44,122 +44,105 @@
 </p>
 
 
-This is a professional `README.md` template for your **ft_ping** project. Since `ft_ping` is a common systems programming project (notably in the 42 Network curriculum), I have filled in the details based on standard requirements for such a tool.
+This is a professional `README.md` template for your **ft_ping** project, tailored to the files provided and the typical requirements of this 42 Network project.
 
-***
+---
 
 # ft_ping
 
-A custom implementation of the standard `ping` command-line utility in C, using raw sockets to send and receive ICMP ECHO_REQUEST packets.
+A custom implementation of the standard network utility `ping` written in C. This project focuses on low-level network programming, raw sockets, and the ICMP protocol.
 
 ![C](https://img.shields.io/badge/language-C-blue.svg)
-![Network](https://img.shields.io/badge/protocol-ICMP-orange.svg)
-![License](https://img.shields.io/badge/license-MIT-green.svg)
+![Network](https://img.shields.io/badge/network-ICMP-orange.svg)
+![Docker](https://img.shields.io/badge/docker-ready-brightgreen.svg)
 
-## 📋 Overview
+## 📝 Overview
 
-`ft_ping` is a network administration utility used to test the reachability of a host on an Internet Protocol (IP) network. It measures the round-trip time (RTT) for messages sent from the originating host to a destination computer that are echoed back to the source.
+`ft_ping` is a command-line utility used to test the reachability of a host on an Internet Protocol (IP) network. It measures the round-trip time (RTT) for messages sent from the originating host to a destination computer that are echoed back to the source.
 
-This project focuses on:
-- Low-level network programming.
-- Working with **Raw Sockets**.
-- Constructing and parsing **ICMP** (Internet Control Message Protocol) headers.
-- Accurate time measurement and statistical calculation.
+The project replicates the core functionality of the system's `ping` command by:
+- Creating and managing **Raw Sockets** (`SOCK_RAW`).
+- Constructing **ICMP Echo Request** packets.
+- Handling **ICMP Echo Reply** packets.
+- Calculating precise timing and packet loss statistics.
 
 ## ✨ Features
 
-- **DNS Resolution**: Supports both IP addresses and hostnames (e.g., `google.com`).
-- **ICMP Protocol**: Custom construction of IP/ICMP packets.
-- **Real-time Statistics**: Calculates min/avg/max/mdev RTT.
-- **Signal Handling**: Graceful exit and summary report on `Ctrl+C`.
-- **Custom Flags**:
-  - `-v`: Verbose output.
-  - `-h`: Display help/usage information.
-- **Dockerized Environment**: Easily test the utility in a controlled containerized environment.
+- **DNS Resolution**: Supports both IP addresses and hostnames.
+- **ICMP Protocol**: Manual construction of ICMP headers.
+- **Verbose Mode**: Detailed output including IP header information.
+- **Statistics reporting**: Summary of packets sent/received, packet loss percentage, and RTT (min/avg/max/mdev).
+- **Graceful handling**: Responds to `SIGINT` (Ctrl+C) to display final statistics.
+- **Customizable**: Support for common flags (e.g., `-v` for verbose).
 
-## 🛠 Installation
+## 🚀 Installation
 
 ### Prerequisites
-- A C compiler (e.g., `gcc` or `clang`).
-- `make` build utility.
-- Linux environment (Raw sockets are specific to the OS networking stack).
+- A Linux-based environment.
+- `gcc` and `make`.
+- **Root privileges**: Since the program uses raw sockets, it must be run with `sudo` or have the `CAP_NET_RAW` capability.
 
-### Building the Project
+### Building the project
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/ft_ping.git
+   git clone https://github.com/your-username/ft_ping.git
    cd ft_ping
    ```
-2. Compile the source:
+2. Compile using the Makefile:
    ```bash
    make
    ```
 
-### Permission Note
-Since `ft_ping` uses **Raw Sockets**, it requires root privileges to run:
+### Using Docker
+If you prefer an isolated environment, use the provided Docker configuration:
 ```bash
-sudo ./ft_ping google.com
-```
-
-## 🚀 Usage
-
-```bash
-Usage: ft_ping [options] <destination>
-
-Options:
-  -v        Verbose output.
-  -h        Display this help message.
-```
-
-### Examples
-**Standard Ping:**
-```bash
-sudo ./ft_ping 8.8.8.8
-```
-
-**Verbose Mode with Hostname:**
-```bash
-sudo ./ft_ping -v example.com
-```
-
-### Docker
-If you prefer to run it inside a container:
-```bash
-# Using Docker Compose
 docker-compose up --build
+```
 
-# Or using Dockerfile directly
-docker build -t ft_ping .
-docker run --cap-add=NET_RAW -it ft_ping ./ft_ping google.com
+## 🛠 Usage
+
+```bash
+sudo ./ft_ping [options] <destination>
+```
+
+### Options
+- `<destination>`: The hostname or IP address to ping.
+- `-v`: Verbose output (displays ICMP packets that are not Echo Replies).
+- `-h`: Display help/usage information.
+
+### Example
+```bash
+$ sudo ./ft_ping google.com
+PING google.com (142.250.184.238): 56 data bytes
+64 bytes from 142.250.184.238: icmp_seq=1 ttl=117 time=14.221 ms
+64 bytes from 142.250.184.238: icmp_seq=2 ttl=117 time=13.845 ms
+^C
+--- google.com ping statistics ---
+2 packets transmitted, 2 packets received, 0% packet loss
+round-trip min/avg/max/stddev = 13.845/14.033/14.221/0.188 ms
 ```
 
 ## 📁 Project Structure
 
-```text
-.
-├── includes/
-│   └── ping.h          # Header file containing structures and defines
-├── srcs/
-│   ├── main.c          # Entry point and argument parsing
-│   └── ping.c          # Core logic (socket creation, send/receive loop)
-├── Dockerfile          # Containerization instructions
-├── docker-compose.yml  # Multi-container setup for testing
-├── Makefile            # Build script
-├── tester.sh           # Automated testing script
-└── README.md           # Project documentation
-```
+| File/Folder | Description |
+| :--- | :--- |
+| `srcs/main.c` | Entry point, argument parsing, and signal handling. |
+| `srcs/ping.c` | Core logic: packet construction, sending/receiving, and timing. |
+| `includes/ping.h`| Structures, macros, and function prototypes. |
+| `Makefile` | Build instructions (all, clean, fclean, re). |
+| `Dockerfile` | Container configuration for testing. |
+| `tester.sh` | Automated test suite to verify functionality and edge cases. |
 
 ## 🧪 Testing
-The project includes a `tester.sh` script to validate the functionality against various scenarios (valid IPs, invalid hostnames, unreachable networks).
+The project includes a `tester.sh` script to validate the implementation against the system's native ping and check for memory leaks or crashes.
 
 ```bash
 chmod +x tester.sh
-./tester.sh
+sudo ./tester.sh
 ```
 
-## ⚖️ License
-
-This project is licensed under the [MIT License](LICENSE). You are free to use, modify, and distribute it.
+## 📜 License
+This project is licensed under the [MIT License](LICENSE) - see the LICENSE file for details. (Note: Replace this with your preferred license).
 
 ---
-*Note: This project was developed for educational purposes to understand the inner workings of the ICMP protocol and network system calls.*
+*This project was developed as part of the curriculum at 42 Network.*
