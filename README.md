@@ -17,91 +17,79 @@
 </p>
 
 
+![Banner](assets/banner.png)
+
 ## Overview
 
-**ft_ping** is a custom implementation of the standard `ping` system utility, developed in C. The project focuses on network programming using raw sockets to send ICMP (Internet Control Message Protocol) Echo Request packets and handle Echo Reply responses. 
+**ft_ping** is a custom implementation of the standard `ping` network utility, written in C. The project focuses on low-level network programming, specifically the use of raw sockets to send and receive ICMP (Internet Control Message Protocol) packets. It serves as a tool to verify the reachability of a host and measure round-trip time (RTT) between the source and destination.
 
-This implementation replicates the core functionality of the original utility, including domain name resolution, packet sequencing, and detailed statistical reporting upon termination.
+This implementation handles the construction of IP and ICMP headers, packet serialization, and the precise timing required for network diagnostics.
 
 ## Features
 
-- **ICMP Protocol:** Manual construction and parsing of ICMP headers and data.
-- **DNS Resolution:** Support for both IP addresses and hostnames.
-- **Real-time Monitoring:** Displays sequence numbers, TTL (Time to Live), and round-trip time (RTT).
-- **Statistics Summary:** Provides a detailed report including packets transmitted/received, packet loss percentage, and RTT metrics (min/avg/max/mdev).
-- **Signal Handling:** Graceful termination via `SIGINT` (Ctrl+C) to display final statistics.
-- **Docker Integration:** Pre-configured environment for testing and deployment to ensure consistency across different network configurations.
+- **ICMP Echo Requests:** Sends `ECHO_REQUEST` packets and listens for `ECHO_REPLY` responses.
+- **Round-Trip Timing:** High-precision calculation of minimum, maximum, average, and standard deviation (mdev) of RTT.
+- **Signal Handling:** Graceful termination via `SIGINT` (Ctrl+C) with a summary of statistics.
+- **Packet Customization:** Support for various command-line options such as verbose output and custom counts (depending on implementation specifics).
+- **Docker Integration:** A containerized environment for consistent testing across different network configurations.
+- **Automated Testing:** Includes a `tester.sh` script to validate functionality against the standard `ping` utility.
 
 ## Installation
 
 ### Prerequisites
 
 - A C compiler (e.g., `gcc` or `clang`).
-- `make` build utility.
-- Root or sudo privileges (required for opening raw sockets).
+- Standard C libraries.
+- Linux environment (required for raw socket access).
+- **Docker** (optional, for containerized execution).
 
 ### Building the Project
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/yourusername/ft_ping.git
+   git clone https://github.com/username/ft_ping.git
    cd ft_ping
    ```
 
-2. Compile the source code:
+2. Compile the source code using the provided `Makefile`:
    ```bash
    make
    ```
 
-### Using Docker
-
-Alternatively, you can build and run the project using the provided Docker configuration:
-
-```bash
-docker-compose up --build
-```
-
 ## Usage
 
-The executable must be run with root privileges to interact with raw sockets.
+**Note:** Since the program utilizes raw sockets, it must be executed with root privileges or `CAP_NET_RAW` capabilities.
 
-```bash
-sudo ./ft_ping <destination> [options]
-```
-
-### Arguments
-- `<destination>`: The hostname (e.g., `google.com`) or IP address (e.g., `8.8.8.8`) to ping.
-
-### Example
+### Basic Command
 ```bash
 sudo ./ft_ping google.com
 ```
 
 ### Options
-- `-v`: Verbose mode (displays more detailed information about received packets and errors).
-- `-h`: Display help/usage information.
+The implementation follows the standard `ping` syntax:
+- `destination`: The hostname or IP address to ping.
+- `-v`: Enable verbose output (detailed ICMP errors).
+- `-?`: Display help and usage information.
+
+### Using with Docker
+To run the utility inside a controlled Docker environment:
+```bash
+docker-compose up --build
+```
 
 ## Project Structure
 
-The project follows a modular structure for clarity and maintainability:
-
 ```text
 .
-├── includes/
-│   └── ping.h          # Header file containing macros, structures, and prototypes
-├── srcs/
-│   ├── main.c          # Entry point and argument parsing
-│   └── ping.c          # Core logic (socket management, ICMP handling, statistics)
-├── assets/
-│   └── banner.png      # Project documentation assets
-├── Dockerfile          # Container configuration
-├── docker-compose.yml  # Multi-container orchestration for testing
-├── Makefile            # Build instructions
-├── tester.sh           # Automated testing script
-├── LICENSE             # Project license
-└── README.md           # Project documentation
+├── assets/              # Visual assets and project banners
+├── includes/            # Header files
+│   └── ping.h           # Core definitions and structures
+├── srcs/                # Source files
+│   ├── main.c           # Entry point and argument parsing
+│   └── ping.c           # Logic for ICMP communication and timing
+├── Dockerfile           # Docker configuration for the environment
+├── docker-compose.yml   # Orchestration for containerized testing
+├── Makefile             # Build automation script
+├── tester.sh            # Automated validation script
+└── .gitignore           # Version control ignore rules
 ```
-
-- **srcs/main.c**: Handles the initialization of the program, command-line argument validation, and DNS resolution.
-- **srcs/ping.c**: Contains the main execution loop, checksum calculations, and the logic for sending/receiving packets via raw sockets.
-- **tester.sh**: A script designed to validate the output and behavior of `ft_ping` against the system's native utility.
