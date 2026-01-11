@@ -38,10 +38,6 @@
 </p>
 <br>
 
-# ft_ping
-
-![Build Status](https://img.shields.io/badge/build-passing-brightgreen) ![License](https://img.shields.io/badge/license-MIT-blue) ![C](https://img.shields.io/badge/language-C-orange)
-
 ## Overview
 
 **ft_ping** is a high-fidelity re-implementation of the classic ICMP network utility. Developed in C, this project serves as a deep dive into low-level network programming, specifically focusing on the **Internet Control Message Protocol (ICMP)** as defined in **RFC 792**. 
